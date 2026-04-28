@@ -35,6 +35,7 @@
   color: var(--text-primary);
   width: 100%;
   box-sizing: border-box;
+  position: relative;
 }
 
 .abstract-section h3,
@@ -130,6 +131,95 @@
   background: #fff2a8;
   padding: 0 2px;
   border-radius: 2px;
+}
+
+.pdf-viewer .react-pdf__Page__textContent span.inline-highlight {
+  background: #fff2a8;
+}
+
+.selection-highlights {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.selection-highlight {
+  position: absolute;
+  background: rgba(255, 242, 168, 0.85);
+  border-radius: 2px;
+}
+
+
+.side-panel {
+  position: fixed;
+  top: 100px;
+  right: 24px;
+  width: 320px;
+  max-height: calc(100vh - 140px);
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1300;
+  display: flex;
+  flex-direction: column;
+}
+
+.side-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 12px;
+}
+
+.side-panel-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.side-panel-tabs button {
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.side-panel-tabs button.active {
+  background: var(--light-bg);
+  color: var(--text-primary);
+}
+
+.side-panel-body {
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.translate-target {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.translate-target button {
+  border: 1px solid var(--border-color);
+  background: white;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.translate-target button.active {
+  border-color: var(--primary-color);
+  background: var(--light-bg);
+  color: var(--primary-color);
 }
 
 .explanation-panel {

@@ -1,6 +1,7 @@
 """AI Services with mock LLM functions"""
 from typing import List, Dict, Any
 import json
+import logging
 import os
 import re
 
@@ -154,6 +155,9 @@ class MockLLMService:
         return f"[Mock Translate -> {target_language}] {text}"
 
 
+logger = logging.getLogger("ai_service")
+
+
 class AIService:
     """AI Service - uses mock LLM by default, can be extended with real API"""
 
@@ -161,12 +165,118 @@ class AIService:
         self.use_mock = use_mock
         self.mock_service = MockLLMService()
 
+    def _groq_chat(self, messages: List[Dict[str, str]], temperature: float = 0.2) -> str:
+        api_key = os.getenv("GROQ_API_KEY", "").strip()
+        model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant").strip()
+        if not api_key:
+            raise ValueError("Missing GROQ_API_KEY")
+
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+        }
+
+        with httpx.Client(timeout=25.0) as client:
+            response = client.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json=payload,
+            )
+            response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"].strip()
+
     def explain_text(self, text: str, context: str = None) -> Dict[str, Any]:
         """Wrapper for text explanation"""
         if self.use_mock:
             return self.mock_service.explain_text(text, context)
-        # Real API implementation would go here
-        return self.mock_service.explain_text(text, context)
+
+        logger.info("Explain via Groq")
+
+        prompt = (
+            "你是中文学术阅读助手。请基于常识性知识解释所选文本，"
+            "不进行网络搜索，不虚构引用。"
+            "优先输出JSON，键为: original_text, explanation, key_terms。"
+            "explanation为中文解释，100-200字为宜，避免在解释中使用英文双引号。"
+            "key_terms为3-6个关键词数组。"
+            "如果无法输出JSON，请按以下格式输出三行：\n"
+            "ORIGINAL_TEXT: ...\nEXPLANATION: ...\nKEY_TERMS: term1, term2, term3"
+        )
+        user_payload = {
+            "text": text,
+            "context": context or "",
+        }
+
+        try:
+            content = self._groq_chat(
+                [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
+                ],
+                temperature=0.3,
+            )
+        except (httpx.HTTPError, KeyError, ValueError):
+            return self.mock_service.explain_text(text, context)
+
+        parsed = None
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            match = re.search(r"\{[\s\S]*\}", content)
+            if match:
+                try:
+                    parsed = json.loads(match.group(0))
+                except json.JSONDecodeError:
+                    parsed = None
+
+        if isinstance(parsed, dict):
+            return {
+                "original_text": parsed.get("original_text", text),
+                "explanation": parsed.get("explanation", ""),
+                "key_terms": parsed.get("key_terms", []),
+            }
+
+        raw = content.strip()
+        if raw.startswith("ORIGINAL_TEXT:"):
+            lines = [line.strip() for line in raw.splitlines() if line.strip()]
+            original_line = next((l for l in lines if l.startswith("ORIGINAL_TEXT:")), "")
+            explain_line = next((l for l in lines if l.startswith("EXPLANATION:")), "")
+            terms_line = next((l for l in lines if l.startswith("KEY_TERMS:")), "")
+            original = original_line.replace("ORIGINAL_TEXT:", "", 1).strip() or text
+            explanation_text = explain_line.replace("EXPLANATION:", "", 1).strip()
+            terms = terms_line.replace("KEY_TERMS:", "", 1).strip()
+            key_terms = [t.strip() for t in terms.split(",") if t.strip()]
+            return {
+                "original_text": original,
+                "explanation": explanation_text or raw,
+                "key_terms": key_terms,
+            }
+
+        if '"explanation"' in raw and '"key_terms"' in raw:
+            expl_start = raw.find('"explanation"')
+            terms_start = raw.find('"key_terms"')
+            explanation_chunk = raw[expl_start:terms_start]
+            explanation_text = explanation_chunk.split(":", 1)[-1].strip().lstrip("\"").rstrip("\", \n\t")
+
+            terms_chunk = raw[terms_start:]
+            list_start = terms_chunk.find("[")
+            list_end = terms_chunk.find("]")
+            key_terms = []
+            if list_start != -1 and list_end != -1 and list_end > list_start:
+                list_body = terms_chunk[list_start + 1 : list_end]
+                key_terms = [t.strip().strip("\"") for t in list_body.split(",") if t.strip()]
+
+            return {
+                "original_text": text,
+                "explanation": explanation_text or raw,
+                "key_terms": key_terms,
+            }
+
+        return {
+            "original_text": text,
+            "explanation": raw,
+            "key_terms": [],
+        }
 
     def generate_essay_ideas(self, paper_title: str, abstract: str = None) -> List[str]:
         """Wrapper for essay idea generation"""
@@ -193,10 +303,17 @@ class AIService:
         if not api_key:
             return self.mock_service.translate_text(text, target_language)
 
-        prompt = (
-            "Translate the following text into "
-            f"{target_language}. Return only the translated text.\n\n{text}"
-        )
+        if target_language.lower() in {"zh", "zh-cn", "zh-hans", "baihua", "modern-chinese"}:
+            instruction = (
+                "将以下文言文或古汉语翻译成白话文，保持意思准确、语气自然。"
+                "只输出翻译结果。"
+            )
+        else:
+            instruction = (
+                "Translate the following text into English. Return only the translated text."
+            )
+
+        prompt = f"{instruction}\n\n{text}"
 
         payload = {
             "model": model,
@@ -257,4 +374,7 @@ class AIService:
 
 
 # Global AI service instance
-ai_service = AIService(use_mock=True)
+_has_groq_key = bool(os.getenv("GROQ_API_KEY", "").strip())
+ai_service = AIService(use_mock=not _has_groq_key)
+logger.info("AI service mode: %s", "groq" if _has_groq_key else "mock")
+print(f"AI service mode: {'groq' if _has_groq_key else 'mock'}")

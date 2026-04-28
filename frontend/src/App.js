@@ -14,6 +14,7 @@ function App() {
   const userId = 'demo-user'; // In production, this would come from auth
   const [showUploadTab, setShowUploadTab] = useState(false);
   const [tabsRestored, setTabsRestored] = useState(false);
+  const [notes, setNotes] = useState([]);
 
   useEffect(() => {
     const saved = localStorage.getItem('paperTabsState');
@@ -35,6 +36,9 @@ function App() {
       if (state.selectedPaper) {
         setSelectedPaper(state.selectedPaper);
       }
+      if (Array.isArray(state.notes)) {
+        setNotes(state.notes);
+      }
     } catch (error) {
       console.warn('Failed to restore tabs state', error);
     }
@@ -49,9 +53,18 @@ function App() {
       currentView,
       showUploadTab,
       selectedPaper,
+      notes,
     };
     localStorage.setItem('paperTabsState', JSON.stringify(state));
-  }, [openPapers, activePaperId, currentView, showUploadTab, selectedPaper, tabsRestored]);
+  }, [openPapers, activePaperId, currentView, showUploadTab, selectedPaper, notes, tabsRestored]);
+
+  const handleSaveNote = (note) => {
+    setNotes((prev) => [{ ...note, id: `${note.sourceId}-${Date.now()}` }, ...prev]);
+  };
+
+  const handleDeleteNote = (noteId) => {
+    setNotes((prev) => prev.filter((note) => note.id !== noteId));
+  };
 
   const handleSelectPaper = (paper) => {
     setSelectedPaper(paper);
@@ -120,6 +133,12 @@ function App() {
           >
             📚 名句溯源
           </button>
+          <button
+            className={`nav-btn ${currentView === 'notes' ? 'active' : ''}`}
+            onClick={() => setCurrentView('notes')}
+          >
+            🗒️ 笔记
+          </button>
         </nav>
 
         {(openPapers.length > 0 || showUploadTab) && (
@@ -179,7 +198,7 @@ function App() {
           )}
 
           {currentView === 'paper' && activePaper && (
-            <PaperViewer paper={activePaper} userId={userId} />
+            <PaperViewer paper={activePaper} userId={userId} onSaveNote={handleSaveNote} />
           )}
 
           {currentView === 'writing' && activePaper && (
@@ -188,6 +207,27 @@ function App() {
 
           {currentView === 'quotes' && (
             <QuoteFinder />
+          )}
+
+          {currentView === 'notes' && (
+            <div className="notes-page">
+              <h2>我的笔记</h2>
+              {notes.length === 0 ? (
+                <p className="no-results">暂无笔记</p>
+              ) : (
+                <div className="notes-page-list">
+                  {notes.map((note) => (
+                    <div key={note.id} className="note-card">
+                      <p className="note-text">"{note.text}"</p>
+                      <span className="note-source">来源: {note.sourceTitle}</span>
+                      <button className="note-delete" onClick={() => handleDeleteNote(note.id)}>
+                        删除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

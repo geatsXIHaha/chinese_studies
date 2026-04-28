@@ -66,6 +66,39 @@
   overflow: hidden;
 }
 
+.notes-page {
+  padding: 20px;
+}
+
+.notes-page h2 {
+  margin-bottom: 16px;
+  color: var(--primary-color);
+}
+
+.notes-page-list {
+  display: grid;
+  gap: 12px;
+}
+
+.note-card {
+  background: var(--light-bg);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.note-delete {
+  align-self: flex-start;
+  background: var(--danger-color);
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
 .paper-tabs {
   display: flex;
   gap: 8px;

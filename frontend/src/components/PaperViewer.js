@@ -9,16 +9,19 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `${process.env.PUBLIC_URL}/pdf.worker.min.mjs`;
 
-export const PaperViewer = ({ paper, userId = 'default-user' }) => {
+export const PaperViewer = ({ paper, userId = 'default-user', onSaveNote }) => {
   const [highlights, setHighlights] = useState([]);
   const [selectedText, setSelectedText] = useState('');
   const [explanation, setExplanation] = useState(null);
   const [loadingExplanation, setLoadingExplanation] = useState(false);
   const [translation, setTranslation] = useState('');
   const [loadingTranslation, setLoadingTranslation] = useState(false);
-  const [notes, setNotes] = useState([]);
+  const [translateTarget, setTranslateTarget] = useState('baihua');
+  const [markRects, setMarkRects] = useState([]);
   const paperContentRef = useRef(null);
   const [showExplanationPanel, setShowExplanationPanel] = useState(false);
+  const [showSidePanel, setShowSidePanel] = useState(false);
+  const [sidePanelTab, setSidePanelTab] = useState('explain');
   const [showPopup, setShowPopup] = useState(false);
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
   const [pdfPages, setPdfPages] = useState(0);
@@ -32,8 +35,17 @@ export const PaperViewer = ({ paper, userId = 'default-user' }) => {
     []
   );
 
+  const highlightStorageKey = useMemo(
+    () => `paper-highlights:${userId}:${paper.id}`,
+    [paper.id, userId]
+  );
+  const scrollStorageKey = useMemo(
+    () => `paper-scroll:${userId}:${paper.id}`,
+    [paper.id, userId]
+  );
+
   useEffect(() => {
-    // Load highlights for this paper
+    // Load highlights for this paper (server stored).
     const loadHighlights = async () => {
       try {
         const response = await highlightAPI.getForPaper(paper.id, userId);
@@ -46,6 +58,29 @@ export const PaperViewer = ({ paper, userId = 'default-user' }) => {
   }, [paper.id, userId]);
 
   useEffect(() => {
+    const saved = localStorage.getItem(highlightStorageKey);
+    if (!saved) {
+      setMarkRects([]);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        setMarkRects(parsed);
+      } else {
+        setMarkRects([]);
+      }
+    } catch (error) {
+      console.warn('Failed to restore highlights', error);
+      setMarkRects([]);
+    }
+  }, [highlightStorageKey]);
+
+  useEffect(() => {
+    localStorage.setItem(highlightStorageKey, JSON.stringify(markRects));
+  }, [highlightStorageKey, markRects]);
+
+  useEffect(() => {
     const updateWidth = () => {
       if (!pdfContainerRef.current) return;
       setPdfWidth(pdfContainerRef.current.clientWidth);
@@ -55,6 +90,35 @@ export const PaperViewer = ({ paper, userId = 'default-user' }) => {
     window.addEventListener('resize', updateWidth);
     return () => window.removeEventListener('resize', updateWidth);
   }, [paper.id]);
+
+  useEffect(() => {
+    if (!paperContentRef.current) return;
+    const saved = localStorage.getItem(scrollStorageKey);
+    if (!saved) return;
+    const parsed = Number(saved);
+    if (!Number.isFinite(parsed)) return;
+
+    // Delay to allow PDF pages to render before restoring scroll.
+    const timer = window.setTimeout(() => {
+      if (paperContentRef.current) {
+        paperContentRef.current.scrollTop = parsed;
+      }
+    }, 200);
+
+    return () => window.clearTimeout(timer);
+  }, [scrollStorageKey, pdfPages]);
+
+  useEffect(() => {
+    const container = paperContentRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      localStorage.setItem(scrollStorageKey, String(container.scrollTop));
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [scrollStorageKey]);
 
   const handleTextSelection = async () => {
     const selection = window.getSelection();
@@ -72,6 +136,7 @@ export const PaperViewer = ({ paper, userId = 'default-user' }) => {
     });
     setShowPopup(true);
     setShowExplanationPanel(false);
+    setShowSidePanel(false);
     setTranslation('');
   };
 
@@ -83,6 +148,8 @@ export const PaperViewer = ({ paper, userId = 'default-user' }) => {
       const response = await highlightAPI.explain(selectedText);
       setExplanation(response.data);
       setShowExplanationPanel(true);
+      setSidePanelTab('explain');
+      setShowSidePanel(true);
     } catch (error) {
       console.error('Error getting explanation:', error);
       setExplanation(null);
@@ -91,13 +158,20 @@ export const PaperViewer = ({ paper, userId = 'default-user' }) => {
     }
   };
 
-  const handleTranslateText = async () => {
+  const handleTranslateText = async (target = translateTarget) => {
     if (!selectedText) return;
 
+    if (target && typeof target === 'object') {
+      target = translateTarget;
+    }
+
     setLoadingTranslation(true);
+    setTranslateTarget(target);
     try {
-      const response = await highlightAPI.translate(selectedText, 'en');
+      const response = await highlightAPI.translate(selectedText, target);
       setTranslation(response.data.translated_text);
+      setSidePanelTab('translate');
+      setShowSidePanel(true);
     } catch (error) {
       console.error('Error translating text:', error);
       setTranslation('');
@@ -108,10 +182,11 @@ export const PaperViewer = ({ paper, userId = 'default-user' }) => {
 
   const handleSaveNote = () => {
     if (!selectedText) return;
-    setNotes((prev) => [
-      { id: `${paper.id}-${Date.now()}`, text: selectedText },
-      ...prev,
-    ]);
+    onSaveNote?.({
+      text: selectedText,
+      sourceId: paper.id,
+      sourceTitle: paper.title,
+    });
     setShowPopup(false);
   };
 
@@ -121,9 +196,37 @@ export const PaperViewer = ({ paper, userId = 'default-user' }) => {
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0) return;
       const range = selection.getRangeAt(0);
-      const mark = document.createElement('mark');
-      mark.className = 'inline-highlight';
-      range.surroundContents(mark);
+      const rects = Array.from(range.getClientRects());
+      if (!paperContentRef.current) return;
+      const containerRect = paperContentRef.current.getBoundingClientRect();
+      const newRects = rects.map((rect) => ({
+        id: `${paper.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        top: rect.top - containerRect.top + paperContentRef.current.scrollTop,
+        left: rect.left - containerRect.left + paperContentRef.current.scrollLeft,
+        width: rect.width,
+        height: rect.height,
+      }));
+
+      const overlaps = (a, b) => {
+        const ax2 = a.left + a.width;
+        const ay2 = a.top + a.height;
+        const bx2 = b.left + b.width;
+        const by2 = b.top + b.height;
+        return a.left < bx2 && ax2 > b.left && a.top < by2 && ay2 > b.top;
+      };
+
+      const existing = markRects;
+      const shouldRemove = existing.some((rect) =>
+        newRects.some((nr) => overlaps(rect, nr))
+      );
+
+      if (shouldRemove) {
+        setMarkRects((prev) =>
+          prev.filter((rect) => !newRects.some((nr) => overlaps(rect, nr)))
+        );
+      } else {
+        setMarkRects((prev) => [...prev, ...newRects]);
+      }
       selection.removeAllRanges();
     } catch (error) {
       console.error('Highlight error:', error);
@@ -142,6 +245,20 @@ export const PaperViewer = ({ paper, userId = 'default-user' }) => {
       </div>
 
       <div className="paper-content" ref={paperContentRef} onMouseUp={handleTextSelection}>
+        <div className="selection-highlights">
+          {markRects.map((rect) => (
+            <div
+              key={rect.id}
+              className="selection-highlight"
+              style={{
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+              }}
+            />
+          ))}
+        </div>
         <div className="abstract-section">
           <h3>摘要</h3>
           <p>{paper.abstract}</p>
@@ -187,60 +304,94 @@ export const PaperViewer = ({ paper, userId = 'default-user' }) => {
         >
           <button onClick={handleMarkHighlight}>标记</button>
           <button onClick={handleExplainText}>解释</button>
-          <button onClick={handleTranslateText}>翻译</button>
+          <button onClick={() => handleTranslateText(translateTarget)}>翻译</button>
           <button onClick={handleSaveNote}>保存笔记</button>
           <button onClick={() => setShowPopup(false)}>✕</button>
         </div>
       )}
 
       {showExplanationPanel && (
-        <div className="explanation-panel">
-          <div className="panel-header">
-            <h3>AI 解释</h3>
-            <button onClick={() => setShowExplanationPanel(false)} className="close-btn">✕</button>
-          </div>
-          {loadingExplanation ? (
-            <p className="loading">加载中...</p>
-          ) : explanation ? (
-            <div className="explanation-content">
-              <div className="explanation-text">
-                <strong>解释:</strong>
-                <p>{explanation.explanation}</p>
-              </div>
-              {explanation.key_terms && explanation.key_terms.length > 0 && (
-                <div className="key-terms">
-                  <strong>关键术语:</strong>
-                  <div className="terms-list">
-                    {explanation.key_terms.map((term, idx) => (
-                      <span key={idx} className="term-tag">{term}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p>点击"解释"按钮获取解释</p>
-          )}
-          {loadingTranslation && <p className="loading">翻译中...</p>}
-          {translation && (
-            <div className="explanation-content">
-              <div className="explanation-text">
-                <strong>翻译:</strong>
-                <p>{translation}</p>
-              </div>
-            </div>
-          )}
-        </div>
+        <div className="explanation-panel" />
       )}
 
-      {notes.length > 0 && (
-        <div className="highlights-list">
-          <h3>我的笔记 ({notes.length})</h3>
-          {notes.map((note) => (
-            <div key={note.id} className="highlight-item">
-              <p className="highlight-text">"{note.text}"</p>
+      {showSidePanel && (
+        <div className="side-panel">
+          <div className="side-panel-header">
+            <div className="side-panel-tabs">
+              <button
+                className={sidePanelTab === 'explain' ? 'active' : ''}
+                onClick={() => setSidePanelTab('explain')}
+              >
+                解释
+              </button>
+              <button
+                className={sidePanelTab === 'translate' ? 'active' : ''}
+                onClick={() => setSidePanelTab('translate')}
+              >
+                翻译
+              </button>
             </div>
-          ))}
+            <button className="close-btn" onClick={() => setShowSidePanel(false)}>✕</button>
+          </div>
+          <div className="side-panel-body">
+            {sidePanelTab === 'explain' && (
+              <>
+                {loadingExplanation ? (
+                  <p className="loading">加载中...</p>
+                ) : explanation ? (
+                  <div className="explanation-content">
+                    <div className="explanation-text">
+                      <strong>解释:</strong>
+                      <p>{explanation.explanation}</p>
+                    </div>
+                    {explanation.key_terms && explanation.key_terms.length > 0 && (
+                      <div className="key-terms">
+                        <strong>关键术语:</strong>
+                        <div className="terms-list">
+                          {explanation.key_terms.map((term, idx) => (
+                            <span key={idx} className="term-tag">{term}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p>点击"解释"按钮获取解释</p>
+                )}
+              </>
+            )}
+            {sidePanelTab === 'translate' && (
+              <>
+                <div className="translate-target">
+                  <span>翻译为:</span>
+                  <button
+                    className={translateTarget === 'baihua' ? 'active' : ''}
+                    onClick={() => handleTranslateText('baihua')}
+                  >
+                    白话文
+                  </button>
+                  <button
+                    className={translateTarget === 'en' ? 'active' : ''}
+                    onClick={() => handleTranslateText('en')}
+                  >
+                    English
+                  </button>
+                </div>
+                {loadingTranslation ? (
+                  <p className="loading">翻译中...</p>
+                ) : translation ? (
+                  <div className="explanation-content">
+                    <div className="explanation-text">
+                      <strong>翻译:</strong>
+                      <p>{translation}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p>点击"翻译"按钮获取译文</p>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
 
