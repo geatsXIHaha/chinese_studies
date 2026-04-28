@@ -1,0 +1,243 @@
+/**
+ * PaperViewer component styles
+ */
+.paper-viewer {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.paper-header {
+  background: linear-gradient(135deg, var(--primary-color), #0d47a1);
+  color: white;
+  padding: 24px;
+  border-bottom: 4px solid var(--secondary-color);
+}
+
+.paper-header h2 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.paper-header .paper-meta {
+  display: flex;
+  gap: 24px;
+  font-size: 14px;
+  opacity: 0.95;
+}
+
+.paper-content {
+  padding: 24px;
+  max-height: 600px;
+  overflow-y: auto;
+  line-height: 1.8;
+  color: var(--text-primary);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.abstract-section h3,
+.full-text-section h3 {
+  color: var(--primary-color);
+  margin-top: 20px;
+  margin-bottom: 12px;
+  font-size: 18px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.full-text-section {
+  width: 100%;
+}
+
+.abstract-section p {
+  margin-bottom: 16px;
+  color: var(--text-secondary);
+}
+
+.full-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background: var(--light-bg);
+  padding: 16px;
+  border-radius: 4px;
+  border-left: 4px solid var(--primary-color);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pdf-viewer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pdf-viewer .react-pdf__Page {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+
+.pdf-viewer .react-pdf__Page__canvas {
+  display: block;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.pdf-viewer .react-pdf__Page__textContent {
+  user-select: text;
+}
+
+.pdf-viewer .react-pdf__Page__textContent span {
+  color: transparent;
+}
+
+.pdf-viewer .react-pdf__Page__textContent ::selection {
+  background: rgba(26, 115, 232, 0.25);
+}
+
+.selection-popup {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  display: inline-flex;
+  gap: 6px;
+  z-index: 1200;
+}
+
+.selection-popup button {
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.selection-popup button:hover {
+  background: var(--light-bg);
+}
+
+.inline-highlight {
+  background: #fff2a8;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.explanation-panel {
+  background: var(--light-bg);
+  border-top: 2px solid var(--primary-color);
+  padding: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.panel-header h3 {
+  color: var(--primary-color);
+  font-size: 16px;
+}
+
+.close-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 0;
+  font-size: 20px;
+  width: 24px;
+  height: 24px;
+}
+
+.explanation-content {
+  background: white;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.explanation-text {
+  margin-bottom: 12px;
+}
+
+.explanation-text strong {
+  display: block;
+  color: var(--primary-color);
+  margin-bottom: 8px;
+}
+
+.explanation-text p {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.key-terms {
+  margin-top: 12px;
+}
+
+.key-terms strong {
+  display: block;
+  color: var(--primary-color);
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.terms-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.term-tag {
+  background: var(--primary-color);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.highlights-list {
+  background: var(--light-bg);
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.highlights-list h3 {
+  color: var(--primary-color);
+  margin-bottom: 12px;
+}
+
+.highlight-item {
+  background: white;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  border-left: 3px solid var(--warning-color);
+}
+
+.highlight-text {
+  color: var(--text-primary);
+  font-style: italic;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.highlight-explanation {
+  color: var(--text-secondary);
+  font-size: 12px;
+  background: var(--light-bg);
+  padding: 8px;
+  border-radius: 2px;
+}

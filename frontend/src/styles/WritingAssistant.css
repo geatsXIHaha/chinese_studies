@@ -1,0 +1,136 @@
+/**
+ * WritingAssistant component styles
+ */
+.writing-assistant {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .writing-assistant {
+    grid-template-columns: 1fr;
+  }
+}
+
+.assistant-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.assistant-section h3 {
+  color: var(--primary-color);
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+.assistant-section p {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.generate-btn,
+.humanise-btn {
+  width: 100%;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.generate-btn:hover:not(:disabled),
+.humanise-btn:hover:not(:disabled) {
+  background-color: #1557b0;
+}
+
+.ideas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.idea-item {
+  background: var(--light-bg);
+  padding: 12px;
+  border-radius: 4px;
+  border-left: 4px solid var(--success-color);
+  display: flex;
+  gap: 12px;
+}
+
+.idea-number {
+  min-width: 24px;
+  height: 24px;
+  background: var(--success-color);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.idea-item p {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.text-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 12px;
+}
+
+.humanised-result {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--light-bg);
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.humanised-result h4 {
+  color: var(--primary-color);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.result-text {
+  background: white;
+  padding: 12px;
+  border-radius: 2px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.copy-btn {
+  width: 100%;
+  background-color: var(--success-color);
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.copy-btn:hover {
+  background-color: #2d8659;
+}

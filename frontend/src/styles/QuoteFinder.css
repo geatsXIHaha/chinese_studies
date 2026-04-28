@@ -1,0 +1,133 @@
+/**
+ * QuoteFinder component styles
+ */
+.quote-finder {
+  padding: 20px;
+}
+
+.quote-header {
+  text-align: center;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, var(--primary-color), #0d47a1);
+  color: white;
+  padding: 24px;
+  border-radius: 8px;
+}
+
+.quote-header h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.quote-header p {
+  font-size: 14px;
+  opacity: 0.95;
+}
+
+.quote-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.quote-search-input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.quote-search-btn {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  min-width: 100px;
+}
+
+.quote-search-btn:hover:not(:disabled) {
+  background-color: #1557b0;
+}
+
+.quotes-results {
+  display: grid;
+  gap: 16px;
+}
+
+.quote-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.quote-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: var(--primary-color);
+}
+
+.quote-content {
+  margin-bottom: 12px;
+}
+
+.quote-text {
+  font-size: 16px;
+  color: var(--text-primary);
+  font-style: italic;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.quote-source {
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: right;
+  font-weight: 500;
+}
+
+.quote-info {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.quote-author,
+.quote-era {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.quote-meaning {
+  background: var(--light-bg);
+  padding: 12px;
+  border-radius: 4px;
+  border-left: 4px solid var(--primary-color);
+}
+
+.quote-meaning strong {
+  color: var(--primary-color);
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.quote-meaning p {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.no-results {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px 20px;
+  font-size: 16px;
+}
