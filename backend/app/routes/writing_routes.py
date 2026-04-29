@@ -4,7 +4,14 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.database import get_db
-from app.schemas import EssayIdeaCreate, EssayIdeaResponse, WriteHumaniserRequest, WriteHumaniserResponse
+from app.schemas import (
+    EssayIdeaCreate,
+    EssayIdeaResponse,
+    WriteHumaniserRequest,
+    WriteHumaniserResponse,
+    PdfChatRequest,
+    PdfChatResponse,
+)
 from app.services import EssayIdeaService, ai_service, PaperService
 
 router = APIRouter(prefix="/api/writing", tags=["writing"])
@@ -67,3 +74,19 @@ def humanise_text(request: WriteHumaniserRequest):
         original_text=request.text,
         humanised_text=humanised,
     )
+
+
+@router.post("/pdf-chat", response_model=PdfChatResponse)
+def pdf_chat(request: PdfChatRequest, db: Session = Depends(get_db)):
+    """Answer questions based on PDF content"""
+    question = (request.message or "").strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Message is required")
+
+    paper = PaperService.get_paper(db, request.paper_id)
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+
+    context = paper.full_text or paper.abstract or ""
+    reply = ai_service.answer_pdf_question(question, context)
+    return PdfChatResponse(reply=reply)

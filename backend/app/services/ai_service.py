@@ -54,6 +54,24 @@ class MockLLMService:
         return ideas[:3]  # Return top 3 ideas
 
     @staticmethod
+    def generate_essay_ideas_structured(title: str, text: str, max_ideas: int = 5) -> List[Dict[str, Any]]:
+        base = title or "学术文本"
+        ideas = []
+        for idx in range(min(max_ideas, 3)):
+            ideas.append(
+                {
+                    "topic": f"{base}的核心议题与现实意义（思路{idx + 1}）",
+                    "thesis": "该研究主题揭示了文本中的关键问题，并对当代情境具有启发性。",
+                    "supporting_points": [
+                        "界定核心概念与理论背景",
+                        "文本中主要证据与案例",
+                        "现实应用与反思",
+                    ],
+                }
+            )
+        return ideas
+
+    @staticmethod
     def humanise_writing(text: str) -> str:
         """Make academic writing more natural and readable"""
         replacements = {
@@ -284,11 +302,150 @@ class AIService:
             return self.mock_service.generate_essay_ideas(paper_title, abstract)
         return self.mock_service.generate_essay_ideas(paper_title, abstract)
 
+    def generate_essay_ideas_structured(
+        self, text: str, title: str | None = None, max_ideas: int = 5
+    ) -> List[Dict[str, Any]]:
+        """Generate structured essay ideas with thesis and supporting points"""
+        safe_text = (text or "").strip()
+        if self.use_mock or not safe_text:
+            return self.mock_service.generate_essay_ideas_structured(title or "", safe_text, max_ideas)
+
+        prompt = (
+            "你是学术写作助手。根据给定文本生成论文选题与提纲。"
+            "输出JSON数组，每个对象包含: topic, thesis, supporting_points。"
+            "supporting_points为3-5条要点。返回3-5条。"
+        )
+
+        payload = {
+            "title": title or "",
+            "text": safe_text[:6000],
+            "max_ideas": max(3, min(max_ideas, 5)),
+        }
+
+        try:
+            content = self._groq_chat(
+                [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+                ],
+                temperature=0.4,
+            )
+        except (httpx.HTTPError, KeyError, ValueError):
+            return self.mock_service.generate_essay_ideas_structured(title or "", safe_text, max_ideas)
+
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            match = re.search(r"\[[\s\S]*\]", content)
+            if match:
+                try:
+                    parsed = json.loads(match.group(0))
+                except json.JSONDecodeError:
+                    parsed = None
+            else:
+                parsed = None
+
+        if isinstance(parsed, list):
+            cleaned = []
+            for item in parsed[: max(3, min(max_ideas, 5))]:
+                if not isinstance(item, dict):
+                    continue
+                cleaned.append(
+                    {
+                        "topic": str(item.get("topic", "")),
+                        "thesis": str(item.get("thesis", "")),
+                        "supporting_points": [
+                            str(p).strip()
+                            for p in (item.get("supporting_points") or [])
+                            if str(p).strip()
+                        ],
+                    }
+                )
+            if cleaned:
+                return cleaned
+
+        return self.mock_service.generate_essay_ideas_structured(title or "", safe_text, max_ideas)
+
+    def elaborate_essay_idea(
+        self,
+        idea_topic: str,
+        user_message: str,
+        paper_title: str | None = None,
+        paper_context: str | None = None,
+    ) -> str:
+        """Provide elaboration guidance for an essay idea"""
+        if self.use_mock:
+            base = idea_topic or "选题"
+            return (
+                f"可以从以下角度展开『{base}』：\n"
+                "1) 概念界定与研究背景\n"
+                "2) 关键论证路径与证据\n"
+                "3) 现实意义与反思\n"
+                "如需更细化，请提供你的写作方向或要点。"
+            )
+
+        prompt = (
+            "你是学术写作助手。根据用户的选题与问题，给出可写内容建议。"
+            "回复结构建议使用分点形式，涵盖写作范围、论证路径、可用证据与可能结构。"
+            "避免编造引用。"
+        )
+
+        payload = {
+            "paper_title": paper_title or "",
+            "paper_context": (paper_context or "")[:2000],
+            "idea_topic": idea_topic,
+            "user_message": user_message,
+        }
+
+        try:
+            return self._groq_chat(
+                [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+                ],
+                temperature=0.5,
+            )
+        except (httpx.HTTPError, KeyError, ValueError):
+            base = idea_topic or "选题"
+            return (
+                f"可以从以下角度展开『{base}』：\n"
+                "1) 概念界定与研究背景\n"
+                "2) 关键论证路径与证据\n"
+                "3) 现实意义与反思\n"
+                "如需更细化，请提供你的写作方向或要点。"
+            )
+
     def humanise_writing(self, text: str) -> str:
         """Wrapper for writing humanization"""
         if self.use_mock:
             return self.mock_service.humanise_writing(text)
         return self.mock_service.humanise_writing(text)
+
+    def answer_pdf_question(self, question: str, context: str) -> str:
+        """Answer questions based on PDF content"""
+        if self.use_mock:
+            return "请先配置 AI 密钥以启用基于 PDF 的问答。"
+
+        prompt = (
+            "你是学术论文阅读助手。仅基于给定内容回答问题，"
+            "如果内容不足以回答，请明确说明。"
+        )
+
+        payload = {
+            "context": (context or "")[:4000],
+            "question": question,
+        }
+
+        try:
+            return self._groq_chat(
+                [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+                ],
+                temperature=0.3,
+            )
+        except (httpx.HTTPError, KeyError, ValueError):
+            return "AI 暂时不可用，请稍后再试。"
 
     def find_chinese_quotes(self, keyword: str) -> List[Dict[str, str]]:
         """Wrapper for Chinese quote finding"""
@@ -336,6 +493,121 @@ class AIService:
         except (httpx.HTTPError, KeyError):
             return self.mock_service.translate_text(text, target_language)
 
+    def find_chinese_quotes_ai(self, text: str) -> List[Dict[str, str]]:
+        """Find Chinese quote sources using Groq (no mock fallback)."""
+        logger.info("Quote finder using Groq")
+        prompt = (
+            "你是中文古籍与名句溯源助手。根据用户输入的句子，"
+            "返回JSON数组，每项包含: original_text, source, author, context_explanation。"
+            "如果不确定来源，请给出最可能的来源并说明不确定性。"
+            "只输出JSON数组。"
+        )
+
+        payload = {
+            "query": text,
+        }
+
+        content = self._groq_chat(
+            [
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+            ],
+            temperature=0.3,
+        )
+
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            match = re.search(r"\[[\s\S]*\]", content)
+            if match:
+                parsed = json.loads(match.group(0))
+            else:
+                parsed = []
+
+        results = []
+        for item in parsed if isinstance(parsed, list) else []:
+            if not isinstance(item, dict):
+                continue
+            results.append(
+                {
+                    "original_text": str(item.get("original_text", "")),
+                    "source": str(item.get("source", "")),
+                    "author": item.get("author"),
+                    "context_explanation": item.get("context_explanation"),
+                }
+            )
+
+        return results
+
+    def suggest_chinese_quotes(self, text: str, max_suggestions: int = 10) -> List[str]:
+        """Suggest possible quote/poem completions using Groq (no mock fallback)."""
+        capped = max(3, min(max_suggestions, 20))
+        prompt = (
+            "你是中文名句与古诗自动补全助手。根据用户输入的片段，"
+            f"返回{capped}条可能的完整句子或相关名句，包含古诗名句。"
+            "只输出JSON数组字符串。"
+        )
+
+        payload = {
+            "query": text,
+        }
+
+        content = self._groq_chat(
+            [
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": json.dumps(payload, ensure_ascii=False)},
+            ],
+            temperature=0.4,
+        )
+
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            match = re.search(r"\[[\s\S]*\]", content)
+            if match:
+                parsed = json.loads(match.group(0))
+            else:
+                parsed = []
+
+        suggestions = []
+        for item in parsed if isinstance(parsed, list) else []:
+            if isinstance(item, str) and item.strip():
+                suggestions.append(item.strip())
+            elif isinstance(item, dict):
+                answer = item.get("answer") or item.get("text") or item.get("quote")
+                if answer is None:
+                    answer = item.get("sentence")
+                if isinstance(answer, str) and answer.strip():
+                    suggestions.append(answer.strip())
+
+        if not suggestions:
+            lines = [line.strip("-• \t") for line in content.splitlines()]
+            for line in lines:
+                if not line or len(line) < 2:
+                    continue
+                if line.startswith("{") or line.startswith("["):
+                    continue
+                suggestions.append(line)
+
+        def normalize(text_value: str) -> str:
+            text_value = re.sub(r"[，。！？；：、\s]+", "", text_value)
+            return text_value
+
+        best_by_norm = {}
+        for value in suggestions:
+            if len(value) > 200:
+                continue
+            key = normalize(value)
+            if not key:
+                continue
+            current = best_by_norm.get(key)
+            if current is None or len(value) < len(current):
+                best_by_norm[key] = value
+
+        deduped = list(best_by_norm.values())
+        deduped.sort(key=len)
+        return deduped[:capped]
+
     def extract_pdf_metadata(self, text: str) -> Dict[str, Any]:
         """Extract PDF metadata with Groq if API key exists, else return empty dict"""
         api_key = os.getenv("GROQ_API_KEY", "").strip()
@@ -345,7 +617,7 @@ class AIService:
 
         prompt = (
             "You are extracting metadata from a Chinese academic paper. "
-            "Return JSON only with keys: title, author, year, abstract. "
+            "Return JSON only with keys: title, author, year, abstract, summary. "
             "Use empty string if missing. Text:\n\n"
             f"{text[:6000]}"
         )
@@ -368,8 +640,18 @@ class AIService:
                 )
                 response.raise_for_status()
                 content = response.json()["choices"][0]["message"]["content"]
-                return json.loads(content)
-        except (httpx.HTTPError, KeyError, json.JSONDecodeError):
+
+                try:
+                    return json.loads(content)
+                except json.JSONDecodeError:
+                    match = re.search(r"\{[\s\S]*\}", content)
+                    if match:
+                        try:
+                            return json.loads(match.group(0))
+                        except json.JSONDecodeError:
+                            return {}
+                    return {}
+        except (httpx.HTTPError, KeyError):
             return {}
 
 

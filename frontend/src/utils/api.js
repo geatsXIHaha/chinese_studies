@@ -55,18 +55,26 @@ export const highlightAPI = {
 export const writingAPI = {
   generateEssayIdeas: (paperId, userId) => 
     api.post(`/writing/essay-ideas/${paperId}?user_id=${userId}`),
+  generateEssayIdeasFromText: (payload) =>
+    api.post('/essay-ideas', payload),
+  chatEssayIdea: (payload) =>
+    api.post('/essay-ideas/chat', payload),
   getEssayIdeas: (paperId, userId) => 
     api.get(`/writing/essay-ideas/${paperId}?user_id=${userId}`),
   deleteEssayIdea: (ideaId) => 
     api.delete(`/writing/essay-ideas/${ideaId}`),
   humaniseText: (text) => 
     api.post('/writing/humanise', { text }),
+  pdfChat: (payload) =>
+    api.post('/writing/pdf-chat', payload),
 };
 
 // Quote API
 export const quoteAPI = {
   search: (keyword) => 
     api.get(`/quotes/search?keyword=${keyword}`),
+  findSource: (text) =>
+    api.post('/find-source', { text }),
   browse: (era = null, limit = 10) => 
     api.get(`/quotes/browse?${era ? `era=${era}&` : ''}limit=${limit}`),
   add: (quoteData) => 

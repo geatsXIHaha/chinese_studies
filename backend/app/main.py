@@ -11,7 +11,15 @@ from app.database import init_db
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-from app.routes import paper_router, highlight_router, writing_router, quote_router
+from app.routes import (
+    paper_router,
+    highlight_router,
+    writing_router,
+    quote_router,
+    essay_router,
+    essay_chat_router,
+    find_source_router,
+)
 
 # Initialize database
 init_db()
@@ -47,6 +55,9 @@ app.include_router(paper_router)
 app.include_router(highlight_router)
 app.include_router(writing_router)
 app.include_router(quote_router)
+app.include_router(essay_router)
+app.include_router(essay_chat_router)
+app.include_router(find_source_router)
 
 
 @app.get("/")

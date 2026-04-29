@@ -48,6 +48,28 @@ class EssayIdea(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class EssayConversation(Base):
+    """Essay idea chat conversation"""
+    __tablename__ = "essay_conversations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    paper_id = Column(Integer, index=True)
+    user_id = Column(String(50), index=True)
+    idea_topic = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class EssayMessage(Base):
+    """Essay idea chat messages"""
+    __tablename__ = "essay_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, index=True)
+    role = Column(String(20))
+    content = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class ChineseQuote(Base):
     """Chinese quotes and sources"""
     __tablename__ = "chinese_quotes"

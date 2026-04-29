@@ -58,6 +58,40 @@
   gap: 16px;
 }
 
+.quote-suggestions {
+  background: var(--light-bg);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.quote-suggestions h4 {
+  margin: 0 0 10px 0;
+  color: var(--primary-color);
+  font-size: 13px;
+}
+
+.suggestion-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestion-item {
+  background: white;
+  border: 1px solid var(--border-color);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.suggestion-item:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
 .quote-card {
   background: white;
   border: 1px solid var(--border-color);

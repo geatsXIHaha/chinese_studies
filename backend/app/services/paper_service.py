@@ -1,6 +1,6 @@
 """Service for academic paper operations"""
 from sqlalchemy.orm import Session
-from app.models import Paper, Highlight, EssayIdea
+from app.models import Paper, Highlight, EssayIdea, EssayConversation, EssayMessage
 from app.schemas import PaperCreate, HighlightCreate, EssayIdeaCreate
 from typing import List, Optional
 
@@ -131,3 +131,52 @@ class EssayIdeaService:
             db.commit()
             return True
         return False
+
+
+class EssayConversationService:
+    """Service for essay idea chat conversations"""
+
+    @staticmethod
+    def create_conversation(
+        db: Session, paper_id: int, user_id: str, idea_topic: str | None
+    ) -> EssayConversation:
+        conversation = EssayConversation(
+            paper_id=paper_id, user_id=user_id, idea_topic=idea_topic
+        )
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+        return conversation
+
+    @staticmethod
+    def get_conversation(db: Session, conversation_id: int) -> EssayConversation | None:
+        return (
+            db.query(EssayConversation)
+            .filter(EssayConversation.id == conversation_id)
+            .first()
+        )
+
+
+class EssayMessageService:
+    """Service for essay idea chat messages"""
+
+    @staticmethod
+    def add_message(
+        db: Session, conversation_id: int, role: str, content: str
+    ) -> EssayMessage:
+        message = EssayMessage(
+            conversation_id=conversation_id, role=role, content=content
+        )
+        db.add(message)
+        db.commit()
+        db.refresh(message)
+        return message
+
+    @staticmethod
+    def list_messages(db: Session, conversation_id: int) -> List[EssayMessage]:
+        return (
+            db.query(EssayMessage)
+            .filter(EssayMessage.conversation_id == conversation_id)
+            .order_by(EssayMessage.created_at.asc())
+            .all()
+        )

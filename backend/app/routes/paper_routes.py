@@ -81,7 +81,11 @@ def _extract_pdf_fields(file_path: str) -> dict:
         or metadata.get("/Author")
         or _extract_author(first_page_text)
     )
-    abstract = ai_result.get("abstract") or _extract_abstract(combined_text_str)
+    abstract = (
+        ai_result.get("summary")
+        or ai_result.get("abstract")
+        or _extract_abstract(combined_text_str)
+    )
 
     year_source = ai_result.get("year") or metadata.get("/CreationDate") or combined_text_str
     year = _extract_year(str(year_source))

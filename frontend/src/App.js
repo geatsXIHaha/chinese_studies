@@ -147,6 +147,10 @@ function App() {
               <div
                 key={paper.id}
                 className={`paper-tab ${activePaperId === paper.id ? 'active' : ''}`}
+                onClick={() => {
+                  setActivePaperId(paper.id);
+                  setCurrentView('paper');
+                }}
               >
                 <button
                   className="paper-tab-title"
@@ -159,7 +163,10 @@ function App() {
                 </button>
                 <button
                   className="paper-tab-close"
-                  onClick={() => handleCloseTab(paper.id)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleCloseTab(paper.id);
+                  }}
                   aria-label="Close tab"
                 >
                   ✕
@@ -167,7 +174,7 @@ function App() {
               </div>
             ))}
             {showUploadTab && (
-              <div className="paper-tab active">
+              <div className={`paper-tab ${currentView === 'search' ? 'active' : ''}`}>
                 <button className="paper-tab-title" onClick={() => setCurrentView('search')}>
                   上传 PDF
                 </button>

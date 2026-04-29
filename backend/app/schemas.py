@@ -68,6 +68,43 @@ class EssayIdeaResponse(EssayIdeaBase):
         from_attributes = True
 
 
+class EssayIdeaGenerateRequest(BaseModel):
+    text: str
+    title: Optional[str] = None
+    max_ideas: int = 5
+
+
+class EssayIdeaStructured(BaseModel):
+    topic: str
+    thesis: str
+    supporting_points: List[str]
+
+
+class EssayIdeaGenerateResponse(BaseModel):
+    ideas: List[EssayIdeaStructured]
+
+
+class EssayChatRequest(BaseModel):
+    paper_id: int
+    user_id: str
+    message: str
+    idea_topic: Optional[str] = None
+    conversation_id: Optional[int] = None
+
+
+class EssayChatMessage(BaseModel):
+    id: int
+    role: str
+    content: str
+    created_at: datetime
+
+
+class EssayChatResponse(BaseModel):
+    conversation_id: int
+    reply: str
+    messages: List[EssayChatMessage]
+
+
 class ChineseQuoteBase(BaseModel):
     quote: str
     source: str
@@ -116,3 +153,29 @@ class WriteHumaniserRequest(BaseModel):
 class WriteHumaniserResponse(BaseModel):
     original_text: str
     humanised_text: str
+
+
+class PdfChatRequest(BaseModel):
+    paper_id: int
+    message: str
+
+
+class PdfChatResponse(BaseModel):
+    reply: str
+
+
+class FindSourceRequest(BaseModel):
+    text: str
+    max_suggestions: int = 10
+
+
+class FindSourceResponse(BaseModel):
+    original_text: str
+    source: str
+    author: Optional[str] = None
+    context_explanation: Optional[str] = None
+
+
+class FindSourceSuggestionsResponse(BaseModel):
+    results: List[FindSourceResponse]
+    suggestions: List[str]

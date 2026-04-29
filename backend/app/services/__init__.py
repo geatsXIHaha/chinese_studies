@@ -1,5 +1,11 @@
 from .ai_service import AIService, ai_service
-from .paper_service import PaperService, HighlightService, EssayIdeaService
+from .paper_service import (
+    PaperService,
+    HighlightService,
+    EssayIdeaService,
+    EssayConversationService,
+    EssayMessageService,
+)
 
 __all__ = [
     "AIService",
@@ -7,4 +13,6 @@ __all__ = [
     "PaperService",
     "HighlightService",
     "EssayIdeaService",
+    "EssayConversationService",
+    "EssayMessageService",
 ]
